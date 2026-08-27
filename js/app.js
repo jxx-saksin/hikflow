@@ -34,6 +34,7 @@ async function boot() {
   try {
     res = await store.resolveSession();
   } catch (e) {
+    console.error('[Hikflow]', e);
     showLoading(false);
     return showGate("Couldn’t connect. Check the keys in js/config.js.");
   }
@@ -95,6 +96,7 @@ async function signIn() {
   try {
     await store.signInWithGoogle(); // 구글로 리다이렉트됨
   } catch (e) {
+    console.error('[Hikflow]', e);
     $("googleBtn").disabled = false;
     $("gate-err").textContent = "Couldn’t start sign-in. Please check your setup.";
   }
@@ -140,6 +142,7 @@ async function renderProjects() {
   try {
     projects = await store.fetchProjects();
   } catch (e) {
+    console.error('[Hikflow]', e);
     return (grid.innerHTML = errBox("Couldn’t load projects."));
   }
 
@@ -183,6 +186,7 @@ async function renderBoard() {
   try {
     tasks = await store.fetchTasks(currentProjectId);
   } catch (e) {
+    console.error('[Hikflow]', e);
     ["wait", "doing", "done"].forEach((s) => ($("col-" + s).innerHTML = ""));
     $("col-wait").innerHTML = errBox("Couldn’t load tasks.");
     return;
@@ -328,6 +332,7 @@ async function renderComments() {
   try {
     list = await store.fetchComments(detailTaskId);
   } catch (e) {
+    console.error('[Hikflow]', e);
     wrap.innerHTML = `<div class="cmt-empty">Couldn’t load comments.</div>`;
     return;
   }
@@ -364,6 +369,7 @@ async function postComment() {
     await renderComments();
     await renderBoard();   // 카드의 코멘트 개수 갱신
   } catch (e) {
+    console.error('[Hikflow]', e);
     toast("Couldn’t post the comment.", true);
   } finally {
     // 입력창이 비어 있으면 버튼도 비활성 상태로 되돌립니다
@@ -378,6 +384,7 @@ async function removeComment(id) {
     await renderComments();
     await renderBoard();
   } catch (e) {
+    console.error('[Hikflow]', e);
     toast("Couldn’t delete the comment.", true);
   }
 }
@@ -449,6 +456,7 @@ async function saveTask() {
     await renderBoard();
     toast(editingTaskId ? "Task updated." : "Task added.");
   } catch (e) {
+    console.error('[Hikflow]', e);
     toast("Couldn’t save. Please try again.", true);
   } finally {
     btn.disabled = false;
@@ -466,6 +474,7 @@ async function removeTask() {
     await renderBoard();
     toast("Task deleted.");
   } catch (e) {
+    console.error('[Hikflow]', e);
     toast("Couldn’t delete. Please try again.", true);
   } finally {
     btn.disabled = false;
@@ -515,6 +524,7 @@ async function saveProject() {
     await renderProjects();
     toast(editingProjectId ? "Project updated." : "Project created.");
   } catch (e) {
+    console.error('[Hikflow]', e);
     toast("Couldn’t save. Please try again.", true);
   } finally {
     btn.disabled = false;
@@ -531,6 +541,7 @@ async function removeProject() {
     await renderProjects();
     toast("Project deleted.");
   } catch (e) {
+    console.error('[Hikflow]', e);
     toast("Couldn’t delete. Please try again.", true);
   } finally {
     btn.disabled = false;
@@ -544,6 +555,7 @@ async function renderLog() {
   try {
     logs = await store.fetchLogs();
   } catch (e) {
+    console.error('[Hikflow]', e);
     return (wrap.innerHTML = errBox("Couldn’t load the activity log."));
   }
   if (!logs.length) {
