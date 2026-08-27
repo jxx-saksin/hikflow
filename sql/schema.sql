@@ -46,15 +46,16 @@ $$;
 
 grant execute on function public.is_allowed_member() to authenticated, anon;
 
--- ★★★ 팀원 이메일을 여기에 넣으세요 (5명). 이미 있으면 건너뜁니다.
---     아래 예시 줄을 실제 이메일로 바꿔서 실행하면 됩니다.
-insert into public.allowed_members (email, name) values
-  ('member1@example.com', 'Member 1'),
-  ('member2@example.com', 'Member 2'),
-  ('member3@example.com', 'Member 3'),
-  ('member4@example.com', 'Member 4'),
-  ('member5@example.com', 'Member 5')
-on conflict (email) do nothing;
+-- ★★★ 팀원 이메일은 이 파일에 넣지 않습니다.
+--     이 저장소는 공개(Public)라서 실제 이메일이 노출되기 때문입니다.
+--     → 이 스키마를 실행한 뒤, 별도로 아래 형태의 구문을 한 번 더 실행하세요.
+--       (로컬 전용 파일 sql/members.local.sql 에 준비돼 있습니다. 깃에 올라가지 않습니다.)
+--
+--     insert into public.allowed_members (email) values
+--       ('someone@your-company.com')
+--     on conflict (email) do nothing;
+--
+--     또는 Supabase 화면에서: Table Editor → allowed_members → Insert row
 
 -- ===========================================================================
 -- 1) 테이블

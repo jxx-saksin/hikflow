@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Hikflow</title>
+<link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+<meta name="theme-color" content="#0a0118">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme:dark; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:#0a0118; color:#9b96b0;
+    font-family:'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-size:15px; line-height:1.75; letter-spacing:-.01em;
+    padding:56px 24px 96px;
+  }
+  .wrap { max-width:720px; margin:0 auto; }
+  .head { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .head img { height:26px; width:auto; }
+  .head span { font-family:'Inter Tight',sans-serif; font-weight:600; font-size:19px; color:#fff; letter-spacing:-.02em; }
+  h1 { font-family:'Inter Tight',sans-serif; font-weight:600; font-size:30px; color:#fff; letter-spacing:-.025em; margin:26px 0 6px; }
+  .updated { font-size:13px; color:#85808c; margin-bottom:40px; }
+  h2 { font-family:'Inter Tight',sans-serif; font-weight:600; font-size:19px; color:#fff; letter-spacing:-.02em; margin:34px 0 10px; }
+  p { margin-bottom:14px; }
+  ul { margin:0 0 14px 20px; }
+  li { margin-bottom:8px; }
+  strong { color:#d2d0dd; font-weight:500; }
+  a { color:#8562ff; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  hr { border:none; border-top:1px solid rgba(255,255,255,.1); margin:44px 0; }
+  .lang { font-size:12px; color:#85808c; text-transform:uppercase; letter-spacing:.18em; margin-bottom:20px; }
+  footer { margin-top:52px; padding-top:22px; border-top:1px solid rgba(255,255,255,.1); font-size:13px; color:#85808c; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <img src="hik-logo.svg" alt="">
+    <span>Hikflow</span>
+  </div>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: 27 August 2026</p>
+
+  <p>
+    Hikflow is a private task board used internally by a small team. It is not a public
+    service and is not open to general sign-up. This policy explains what the application
+    stores and how it is used.
+  </p>
+
+  <h2>Who can use Hikflow</h2>
+  <p>
+    Access is limited to people whose email address has been explicitly added to an
+    allow list by the team. Signing in with a Google account that is not on that list
+    grants no access and no data is created for that account.
+  </p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Account information from Google.</strong> When you sign in with Google we
+      receive your email address, your name, and your Google account identifier. We request
+      no other Google permissions — we cannot read your email, files, contacts or calendar.</li>
+    <li><strong>Content you enter.</strong> Projects, applications, tasks, assignees,
+      due dates, links and comments that you or your teammates create in the app.</li>
+    <li><strong>Activity records.</strong> The app automatically records who added, edited,
+      moved, completed, deleted or commented on an item, and when, so the team can see the
+      history of a project.</li>
+  </ul>
+  <p>
+    We do not collect payment details, we do not use advertising or analytics trackers,
+    and the app does not accept image, video or other file uploads.
+  </p>
+
+  <h2>How it is stored</h2>
+  <p>
+    Data is stored in a <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>
+    (PostgreSQL) database and is protected by row-level security rules, so only signed-in
+    members on the allow list can read or write it. The application itself is a static site
+    hosted on GitHub Pages and holds no data of its own.
+  </p>
+
+  <h2>How it is used</h2>
+  <p>
+    The information is used only to operate the task board — to show tasks, identify who is
+    responsible for them, and display the activity history to other members of the team.
+    It is not used for any other purpose.
+  </p>
+
+  <h2>Sharing</h2>
+  <p>
+    We do not sell, rent or trade any information, and we do not share it with third parties
+    for their own purposes. Data is visible to the members of the team who use this board.
+    Our infrastructure providers — Supabase (database and authentication) and GitHub
+    (site hosting) — process data solely on our behalf in order to run the service.
+  </p>
+
+  <h2>Retention and deletion</h2>
+  <p>
+    Content stays until a team member deletes it. Deleting a project also deletes the tasks
+    and comments inside it. To have your account and the personal information associated with
+    it removed, ask a team administrator to remove your address from the allow list and delete
+    your profile; access ends immediately when your address is removed.
+  </p>
+
+  <h2>Security</h2>
+  <p>
+    All traffic is served over HTTPS. Authentication is handled by Google — Hikflow never sees
+    or stores your Google password. Permission checks are enforced in the database itself,
+    not only in the browser.
+  </p>
+
+  <h2>Changes</h2>
+  <p>
+    If this policy changes, the updated version will be posted on this page with a new date.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    For any question about this policy or about the data held about you, please contact the
+    team administrator who invited you to Hikflow.
+  </p>
+
+  <hr>
+
+  <p class="lang">한국어 요약</p>
+
+  <p>
+    Hikflow는 소규모 팀이 내부적으로 사용하는 비공개 업무 보드입니다. 일반 가입은 받지 않으며,
+    <strong>허용 명단에 등록된 이메일 주소</strong>만 접근할 수 있습니다. 명단에 없는 계정으로
+    구글 로그인을 하더라도 어떤 데이터도 열람·생성되지 않습니다.
+  </p>
+  <p>
+    수집하는 정보는 <strong>구글 계정의 이메일·이름·식별자</strong>와, 사용자가 직접 입력한
+    <strong>프로젝트·업무·담당자·마감일·링크·코멘트</strong>, 그리고 누가 언제 무엇을 했는지에 대한
+    <strong>활동 기록</strong>입니다. 지메일·드라이브·연락처 등 다른 구글 정보에는 접근하지 않으며,
+    광고·분석 추적 도구를 사용하지 않고 파일 업로드 기능도 없습니다.
+  </p>
+  <p>
+    데이터는 Supabase(PostgreSQL)에 저장되고 데이터베이스 자체의 접근 권한 규칙으로 보호됩니다.
+    수집한 정보는 업무 보드를 운영하는 목적으로만 쓰이며, 제3자에게 판매하거나 제공하지 않습니다.
+    내용은 팀원이 삭제할 때까지 보관되고, 계정 삭제를 원하시면 팀 관리자에게 요청하시면 됩니다.
+    문의는 Hikflow에 초대해 준 팀 관리자에게 해주세요.
+  </p>
+
+  <footer>
+    <a href="./">← Back to Hikflow</a>
+  </footer>
+
+</div>
+</body>
+</html>

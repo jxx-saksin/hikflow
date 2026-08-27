@@ -4,7 +4,6 @@
 // 활동 로그는 DB 트리거가 자동 기록하므로 여기서 log()를 부르지 않습니다.
 // =============================================================================
 import { supabase } from "./supabase.js";
-import { ALLOWED_DOMAIN } from "./config.js";
 
 // 현재 로그인한 사용자 프로필 { id, email, name }
 export let currentUser = null;
@@ -16,8 +15,9 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo,
-      // 회사 도메인 계정만 계정 선택창에 뜨도록 유도(+ 서버측은 RLS가 최종 차단)
-      queryParams: { hd: ALLOWED_DOMAIN.replace(/^@/, ""), prompt: "select_account" },
+      // 도메인 제한 없음 — 어떤 구글 계정으로도 로그인 시도는 가능하고,
+      // 실제 접근 여부는 허용 명단(allowed_members)이 판단합니다.
+      queryParams: { prompt: "select_account" },
     },
   });
   if (error) throw error;

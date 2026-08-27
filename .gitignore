@@ -13,6 +13,9 @@
 DESIGN.md
 teamboard-prototype.html
 
+# 실제 팀원 이메일 — 공개 저장소에 노출되면 안 됨
+*.local.sql
+
 # ⚠ config.js 는 일부러 무시하지 않습니다.
 #   GitHub Pages가 이 파일을 브라우저로 서빙해야 앱이 동작합니다.
 #   여기에는 공개돼도 안전한 anon 키만 넣으세요(service_role 키 금지).
