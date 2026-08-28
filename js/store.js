@@ -70,7 +70,7 @@ export function onAuthChange(cb) {
 // 프로젝트 목록 + 진행률 계산용 업무 상태
 export async function fetchProjects() {
   const { data: projects, error } = await supabase
-    .from("projects").select("id,name,description,status,created_at")
+    .from("projects").select("id,name,description,status,key_points,created_at")
     .order("created_at", { ascending: true });
   if (error) throw error;
 
@@ -90,7 +90,7 @@ export async function fetchProjects() {
 
 export async function fetchProject(id) {
   const { data, error } = await supabase
-    .from("projects").select("id,name,description,status").eq("id", id).single();
+    .from("projects").select("id,name,description,status,key_points").eq("id", id).single();
   if (error) throw error;
   return data;
 }
@@ -100,9 +100,8 @@ export async function fetchTasks(projectId) {
   const { data, error } = await supabase
     .from("tasks")
     .select(`
-      id, title, due_date, link, state, project_id, application_id,
-      app:applications(name),
-      assignee:profiles!tasks_assignee_id_fkey(id,name),
+      id, title, description, due_date, link, state, project_id,
+      assignees:task_assignees(profile:profiles(id,name)),
       comments:task_comments(count)
     `)
     .eq("project_id", projectId)
@@ -112,12 +111,51 @@ export async function fetchTasks(projectId) {
   return data.map((t) => ({
     id: t.id,
     title: t.title,
+    description: t.description || "",
     due: t.due_date,
     link: t.link,
     state: t.state,
-    app: t.app?.name || "",
-    assigneeId: t.assignee?.id || null,
-    assignee: t.assignee?.name || "",
+    // 담당자 여러 명 → [{id, name}]
+    assignees: (t.assignees || []).map((a) => a.profile).filter(Boolean),
+    commentCount: t.comments?.[0]?.count || 0,
+  }));
+}
+
+// 내가 담당인 업무 (프로젝트 구분 없이 전부). 프로젝트 이름도 함께 가져옵니다.
+export async function fetchMyTasks() {
+  const me = currentUser?.id;
+  if (!me) return [];
+
+  // 1) 내가 담당으로 걸린 업무 id 목록
+  const { data: rows, error } = await supabase
+    .from("task_assignees").select("task_id").eq("profile_id", me);
+  if (error) throw error;
+
+  const ids = rows.map((r) => r.task_id);
+  if (!ids.length) return [];
+
+  // 2) 그 업무들의 내용 + 프로젝트 이름 + 담당자 전체
+  const { data, error: e2 } = await supabase
+    .from("tasks")
+    .select(`
+      id, title, description, due_date, link, state, project_id,
+      project:projects(name),
+      assignees:task_assignees(profile:profiles(id,name)),
+      comments:task_comments(count)
+    `)
+    .in("id", ids);
+  if (e2) throw e2;
+
+  return data.map((t) => ({
+    id: t.id,
+    title: t.title,
+    description: t.description || "",
+    due: t.due_date,
+    link: t.link,
+    state: t.state,
+    projectId: t.project_id,
+    projectName: t.project?.name || "",
+    assignees: (t.assignees || []).map((a) => a.profile).filter(Boolean),
     commentCount: t.comments?.[0]?.count || 0,
   }));
 }
@@ -148,49 +186,48 @@ export async function fetchLogs(limit = 200) {
 
 // ---------- 생성 / 수정 ---------------------------------------------------
 
-export async function createProject(name, description) {
+export async function createProject({ name, description, keyPoints }) {
   const { data, error } = await supabase
     .from("projects")
-    .insert({ name, description: description || null, created_by: currentUser?.id, status: "active" })
+    .insert({
+      name,
+      description: (description || "").trim() || null,
+      key_points: keyPoints || [],
+      created_by: currentUser?.id,
+      status: "active",
+    })
     .select("id").single();
   if (error) throw error;
   return data.id;
 }
 
-// 프로젝트 내 애플리케이션을 이름으로 찾고 없으면 생성 (3단 계층 유지)
-async function getOrCreateApplication(projectId, name) {
-  const clean = (name || "").trim();
-  if (!clean) return null;
+// 업무의 담당자 목록을 통째로 맞춰줍니다(있던 건 지우고 새로 넣음).
+async function setAssignees(taskId, assigneeIds) {
+  const del = await supabase.from("task_assignees").delete().eq("task_id", taskId);
+  if (del.error) throw del.error;
 
-  const found = await supabase
-    .from("applications").select("id")
-    .eq("project_id", projectId).eq("name", clean).maybeSingle();
-  if (found.data) return found.data.id;
+  const ids = [...new Set((assigneeIds || []).filter(Boolean))];
+  if (!ids.length) return;
 
-  const created = await supabase
-    .from("applications").insert({ project_id: projectId, name: clean }).select("id").single();
-  if (!created.error) return created.data.id;
-
-  // 동시 생성 등으로 unique 충돌 시 재조회
-  const retry = await supabase
-    .from("applications").select("id")
-    .eq("project_id", projectId).eq("name", clean).maybeSingle();
-  return retry.data?.id || null;
+  const { error } = await supabase
+    .from("task_assignees")
+    .insert(ids.map((profile_id) => ({ task_id: taskId, profile_id })));
+  if (error) throw error;
 }
 
-export async function createTask({ projectId, appName, title, assigneeId, due, link, state }) {
-  const application_id = await getOrCreateApplication(projectId, appName);
-  const { error } = await supabase.from("tasks").insert({
+export async function createTask({ projectId, title, description, assigneeIds, due, link, state }) {
+  const { data, error } = await supabase.from("tasks").insert({
     project_id: projectId,
-    application_id,
     title,
-    assignee_id: assigneeId || null,
+    description: (description || "").trim() || null,
     due_date: due || null,
     link: (link || "").trim() || null,
     state: state || "wait",
     created_by: currentUser?.id,
-  });
+  }).select("id").single();
   if (error) throw error;
+
+  await setAssignees(data.id, assigneeIds);
 }
 
 export async function moveTask(taskId, newState) {
@@ -198,17 +235,17 @@ export async function moveTask(taskId, newState) {
   if (error) throw error;
 }
 
-export async function updateTask(taskId, { projectId, appName, title, assigneeId, due, link, state }) {
-  const application_id = await getOrCreateApplication(projectId, appName);
+export async function updateTask(taskId, { title, description, assigneeIds, due, link, state }) {
   const { error } = await supabase.from("tasks").update({
-    application_id,
     title,
-    assignee_id: assigneeId || null,
+    description: (description || "").trim() || null,
     due_date: due || null,
     link: (link || "").trim() || null,
     state,
   }).eq("id", taskId);
   if (error) throw error;
+
+  await setAssignees(taskId, assigneeIds);
 }
 
 export async function deleteTask(taskId) {
@@ -216,9 +253,14 @@ export async function deleteTask(taskId) {
   if (error) throw error;
 }
 
-export async function updateProject(id, { name, description, status }) {
+export async function updateProject(id, { name, description, status, keyPoints }) {
   const { error } = await supabase.from("projects")
-    .update({ name, description: description || null, status }).eq("id", id);
+    .update({
+      name,
+      description: (description || "").trim() || null,
+      key_points: keyPoints || [],
+      status,
+    }).eq("id", id);
   if (error) throw error;
 }
 
@@ -270,6 +312,7 @@ export function subscribeRealtime(cb) {
     .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, cb)
     .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, cb)
     .on("postgres_changes", { event: "*", schema: "public", table: "task_comments" }, cb)
+    .on("postgres_changes", { event: "*", schema: "public", table: "task_assignees" }, cb)
     .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, cb)
     .subscribe();
 }

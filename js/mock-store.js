@@ -24,18 +24,20 @@ const isoIn = (days) => { const d = new Date(); d.setDate(d.getDate() + days); r
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 let projects = [
-  { id: "p1", name: "Booking System Revamp", description: "Rebuild the meeting room and equipment booking service", status: "active" },
-  { id: "p2", name: "Customer Dashboard v2", description: "New usage analytics and reporting screens", status: "active" },
-  { id: "p3", name: "Legacy API Cleanup", description: "Document old endpoints, then deprecate them in phases", status: "hold" },
+  { id: "p1", name: "Booking System Revamp", description: "Rebuild the meeting room and equipment booking service", status: "active",
+    key_points: ["Must ship before the Q4 office move", "Legal sign-off needed for the data migration"] },
+  { id: "p2", name: "Customer Dashboard v2", description: "New usage analytics and reporting screens", status: "active", key_points: [] },
+  { id: "p3", name: "Legacy API Cleanup", description: "Document old endpoints, then deprecate them in phases", status: "hold",
+    key_points: ["Do not remove v1 until the mobile app is updated"] },
 ];
 
 let tasks = [
-  { id: "t1", projectId: "p1", app: "Booking UI", title: "Build drag-to-select calendar interaction", assigneeId: "u1", due: isoIn(3), link: "", state: "doing" },
-  { id: "t2", projectId: "p1", app: "Booking UI", title: "Prevent double-booking on overlapping slots", assigneeId: "u2", due: isoIn(-1), link: "", state: "doing" },
-  { id: "t3", projectId: "p1", app: "Notifications", title: "Write the booking confirmation email template", assigneeId: "u3", due: isoIn(6), link: "", state: "wait" },
-  { id: "t4", projectId: "p1", app: "Admin", title: "Equipment list CRUD screens", assigneeId: "u4", due: isoIn(-3), link: "", state: "done" },
-  { id: "t5", projectId: "p2", app: "Stats API", title: "Optimize the daily aggregation query", assigneeId: "u5", due: isoIn(5), link: "", state: "doing" },
-  { id: "t6", projectId: "p2", app: "Charts", title: "Retention graph component", assigneeId: "u1", due: isoIn(9), link: "", state: "wait" },
+  { id: "t1", projectId: "p1", title: "Drag-to-select calendar", description: "Let people drag across time slots to pick a range. Must work with touch too.", assigneeIds: ["u1","u2"], due: isoIn(3), link: "", state: "doing" },
+  { id: "t2", projectId: "p1", title: "Prevent double-booking", description: "Reject overlapping reservations for the same room.", assigneeIds: ["u2"], due: isoIn(-1), link: "", state: "doing" },
+  { id: "t3", projectId: "p1", title: "Confirmation email", description: "", assigneeIds: [], due: isoIn(6), link: "", state: "wait" },
+  { id: "t4", projectId: "p1", title: "Equipment list CRUD", description: "Admin screens to add, edit and retire equipment.", assigneeIds: ["u4","u5","u1"], due: isoIn(-3), link: "", state: "done" },
+  { id: "t5", projectId: "p2", title: "Daily aggregation query", description: "", assigneeIds: ["u5"], due: isoIn(5), link: "", state: "doing" },
+  { id: "t6", projectId: "p2", title: "Retention graph", description: "Cohort retention chart for the dashboard.", assigneeIds: ["u1"], due: isoIn(9), link: "", state: "wait" },
 ];
 
 let logs = [];
@@ -98,7 +100,7 @@ export async function fetchTasks(projectId) {
     .filter((t) => t.projectId === projectId)
     .map((t) => ({
       ...t,
-      assignee: TEAM.find((u) => u.id === t.assigneeId)?.name || "",
+      assignees: (t.assigneeIds || []).map((id) => TEAM.find((u) => u.id === id)).filter(Boolean),
       commentCount: comments.filter((c) => c.taskId === t.id).length,
     }));
 }
@@ -134,24 +136,39 @@ export async function deleteComment(commentId) {
   comments = comments.filter((c) => c.id !== commentId);
 }
 
+// 내가 담당인 업무 (프로젝트 구분 없이 전부)
+export async function fetchMyTasks() {
+  await sleep();
+  const me = currentUser?.id;
+  return tasks
+    .filter((t) => (t.assigneeIds || []).includes(me))
+    .map((t) => ({
+      ...t,
+      projectName: projects.find((p) => p.id === t.projectId)?.name || "",
+      assignees: (t.assigneeIds || []).map((id) => TEAM.find((u) => u.id === id)).filter(Boolean),
+      commentCount: comments.filter((c) => c.taskId === t.id).length,
+    }));
+}
+
 export async function fetchTeam() { await sleep(60); return TEAM; }
 
 export async function fetchLogs() { await sleep(); return logs; }
 
 // ---------- 생성 / 수정 ---------------------------------------------------
-export async function createProject(name, description) {
+export async function createProject({ name, description, keyPoints }) {
   await sleep();
-  const p = { id: uid(), name, description: description || "No description", status: "active" };
+  const p = { id: uid(), name, description: (description || "").trim(),
+              key_points: keyPoints || [], status: "active" };
   projects.push(p);
   addLog("project_added", { name }, p.id);
   return p.id;
 }
 
-export async function createTask({ projectId, appName, title, assigneeId, due, link, state }) {
+export async function createTask({ projectId, title, description, assigneeIds, due, link, state }) {
   await sleep();
   const t = {
-    id: uid(), projectId, app: (appName || "").trim(), title,
-    assigneeId: assigneeId || null, due: due || null, link: (link || "").trim(),
+    id: uid(), projectId, title, description: (description || "").trim(),
+    assigneeIds: [...new Set(assigneeIds || [])], due: due || null, link: (link || "").trim(),
     state: state || "wait",
   };
   tasks.push(t);
@@ -168,14 +185,14 @@ export async function moveTask(taskId, newState) {
   if (newState === "done") addLog("task_done", { title: t.title }, t.projectId);
 }
 
-export async function updateTask(taskId, { appName, title, assigneeId, due, link, state }) {
+export async function updateTask(taskId, { title, description, assigneeIds, due, link, state }) {
   await sleep();
   const t = tasks.find((x) => x.id === taskId);
   if (!t) return;
   const from = t.state;
   Object.assign(t, {
-    app: (appName || "").trim(), title,
-    assigneeId: assigneeId || null, due: due || null, link: (link || "").trim(), state,
+    title, description: (description || "").trim(),
+    assigneeIds: [...new Set(assigneeIds || [])], due: due || null, link: (link || "").trim(), state,
   });
   addLog("task_edited", { title }, t.projectId);
   if (from !== state) {
@@ -193,11 +210,12 @@ export async function deleteTask(taskId) {
   addLog("task_deleted", { title: t.title }, t.projectId);
 }
 
-export async function updateProject(id, { name, description, status }) {
+export async function updateProject(id, { name, description, status, keyPoints }) {
   await sleep();
   const p = projects.find((x) => x.id === id);
   if (!p) return;
-  Object.assign(p, { name, description: description || "No description", status });
+  Object.assign(p, { name, description: (description || "").trim(),
+                     key_points: keyPoints || [], status });
   addLog("project_edited", { name }, id);
 }
 

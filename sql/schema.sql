@@ -74,6 +74,7 @@ create table if not exists public.projects (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   description text,
+  key_points  text[] not null default '{}',   -- 눈에 띄게 표시할 핵심 사항 (선택, 여러 개)
   status      text not null default 'active' check (status in ('active','hold','closed')),
   created_by  uuid references public.profiles(id) on delete set null,
   created_at  timestamptz not null default now()
@@ -93,9 +94,10 @@ create table if not exists public.applications (
 create table if not exists public.tasks (
   id             uuid primary key default gen_random_uuid(),
   project_id     uuid not null references public.projects(id) on delete cascade,
-  application_id uuid references public.applications(id) on delete set null,
-  title          text not null,
-  assignee_id    uuid references public.profiles(id) on delete set null,
+  application_id uuid references public.applications(id) on delete set null,  -- (미사용, 향후 그룹핑용)
+  title          text not null,          -- 업무 이름 (카드의 제목)
+  description    text,                   -- 설명 (선택)
+  assignee_id    uuid references public.profiles(id) on delete set null,  -- (구버전. 지금은 task_assignees 사용)
   due_date       date,
   link           text,
   state          text not null default 'wait' check (state in ('wait','doing','done')),
@@ -104,6 +106,14 @@ create table if not exists public.tasks (
   updated_at     timestamptz not null default now()
 );
 create index if not exists tasks_project_idx on public.tasks(project_id);
+
+-- 업무 담당자 (한 업무에 여러 명 지정 가능) ---------------------------------
+create table if not exists public.task_assignees (
+  task_id    uuid not null references public.tasks(id) on delete cascade,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  primary key (task_id, profile_id)
+);
+create index if not exists task_assignees_profile_idx on public.task_assignees(profile_id);
 
 -- 업무 코멘트 ---------------------------------------------------------------
 -- 업무 카드를 누르면 열리는 상세 화면에서 팀원들이 의견을 주고받는 곳.
@@ -268,9 +278,9 @@ security definer
 set search_path = public
 as $$
 begin
-  if (new.title, new.assignee_id, new.due_date, new.link, new.application_id)
+  if (new.title, new.description, new.due_date, new.link)
      is distinct from
-     (old.title, old.assignee_id, old.due_date, old.link, old.application_id) then
+     (old.title, old.description, old.due_date, old.link) then
     insert into public.activity_logs (actor_id, project_id, task_id, verb, meta)
     values (auth.uid(), new.project_id, new.id, 'task_edited',
             jsonb_build_object('title', new.title));
@@ -292,8 +302,8 @@ security definer
 set search_path = public
 as $$
 begin
-  if (new.name, new.description, new.status)
-     is distinct from (old.name, old.description, old.status) then
+  if (new.name, new.description, new.status, new.key_points)
+     is distinct from (old.name, old.description, old.status, old.key_points) then
     insert into public.activity_logs (actor_id, project_id, verb, meta)
     values (auth.uid(), new.id, 'project_edited', jsonb_build_object('name', new.name));
   end if;
@@ -359,6 +369,7 @@ alter table public.profiles       enable row level security;
 alter table public.projects       enable row level security;
 alter table public.applications   enable row level security;
 alter table public.tasks          enable row level security;
+alter table public.task_assignees enable row level security;
 alter table public.task_comments  enable row level security;
 alter table public.activity_logs  enable row level security;
 
@@ -387,6 +398,11 @@ create policy applications_all on public.applications
 
 drop policy if exists tasks_all on public.tasks;
 create policy tasks_all on public.tasks
+  for all using (public.is_allowed_member()) with check (public.is_allowed_member());
+
+-- task_assignees: 명단 사용자는 자유롭게 담당자를 지정/해제할 수 있음
+drop policy if exists assignees_all on public.task_assignees;
+create policy assignees_all on public.task_assignees
   for all using (public.is_allowed_member()) with check (public.is_allowed_member());
 
 -- task_comments: 회사 사용자는 모두 읽고 쓸 수 있지만,
@@ -420,7 +436,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['projects','tasks','task_comments','activity_logs'] loop
+  foreach t in array array['projects','tasks','task_assignees','task_comments','activity_logs'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
